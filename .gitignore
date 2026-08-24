@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# generated analysis outputs
+histograms/
+figures/
+metrics/
+histograms.root
+workspace.json
+workspace_ml.json
+*.executed.ipynb

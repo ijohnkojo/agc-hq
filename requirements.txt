@@ -1,0 +1,19 @@
+# Analysis dependencies (the coffea_env conda environment already provides most of these).
+coffea
+awkward
+uproot
+hist
+vector
+correctionlib
+cabinetry
+pyhf
+hepdata_lib
+matplotlib
+numpy
+tqdm
+cloudpickle
+jupyterlab
+
+# hq itself: install editable from the sibling repo (run manually, since the
+# path depends on where you cloned it):
+#   pip install -e ../hq
