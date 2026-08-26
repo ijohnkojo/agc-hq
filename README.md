@@ -40,10 +40,12 @@ The hq services still live in the hq repo. In one terminal:
 
 ```bash
 cd ../hq
-# redis + TLS server; see hq's README / docs for details
-bash scripts/testrun.sh   # or start redis + `bun typescript/server.ts` manually
+redis-server --port 6379 &
+bun run typescript/server.ts &      # TLS server on https://localhost:3000
 export HQ_RESULT_DIR=/tmp/hq-results
 ```
+
+See hq's [deployment guide](../hq/docs/ops/deployment.md) for details.
 
 Then, from this repo:
 

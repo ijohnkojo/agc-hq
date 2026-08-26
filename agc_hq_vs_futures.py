@@ -4,7 +4,7 @@ Uses N_FILES_MAX_PER_SAMPLE=1, USE_INFERENCE=False, and maxchunks to keep the
 job small. Compares histogram bin contents.
 
 Requires (HQ half):
-  redis + TLS HQ server (started from the hq repo)
+  redis + HQ server (started from the hq repo; plain HTTP, no TLS)
   export HQ_RESULT_DIR=/tmp/hq-results
   hq installed in the environment (pip install -e ~/irishep/hq)
 
@@ -44,9 +44,8 @@ CHUNKSIZE = 50_000
 # One process is enough to validate hist equality; full fileset is N_FILES=1 × all samples.
 SAMPLE_KEYS = ("ttbar__nominal",)
 
-HOST = "https://localhost"
+HOST = "http://localhost"
 PORT = 3000
-VERIFY = str(Path("~/irishep/hq/cert.pem").expanduser())
 
 
 def build_fileset() -> dict:
@@ -119,7 +118,6 @@ if __name__ == "__main__":
     hq = CoffeaHQExecutor(
         host=HOST,
         port=PORT,
-        verify=VERIFY,
         n_workers=8,
         queue=f"agc-hq-vs-futures-{os.getpid()}",
         poll_interval=1.0,

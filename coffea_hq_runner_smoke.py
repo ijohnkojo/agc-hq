@@ -2,7 +2,7 @@
 
 Compares event counts to FuturesExecutor. No full AGC TtbarAnalysis.
 
-Requires redis + TLS HQ server (started from the hq repo), and:
+Requires redis + HQ server (started from the hq repo; plain HTTP, no TLS), and:
   export HQ_RESULT_DIR=/tmp/hq-results
   hq installed in the environment (pip install -e ~/irishep/hq)
 
@@ -25,9 +25,8 @@ from hq.coffea import CoffeaHQExecutor
 HERE = Path(__file__).resolve().parent
 INPUTS = HERE / "nanoaod_inputs.json"
 
-HOST = "https://localhost"
+HOST = "http://localhost"
 PORT = 3000
-VERIFY = str(Path("~/irishep/hq/cert.pem").expanduser())
 
 # Keep the job tiny: one file, one chunk.
 CHUNKSIZE = 10_000
@@ -88,7 +87,6 @@ if __name__ == "__main__":
     hq_executor = CoffeaHQExecutor(
         host=HOST,
         port=PORT,
-        verify=VERIFY,
         n_workers=2,
         queue=f"coffea-hq-runner-smoke-{os.getpid()}",
         poll_interval=1.0,
