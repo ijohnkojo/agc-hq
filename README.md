@@ -41,7 +41,7 @@ The hq services still live in the hq repo. In one terminal:
 ```bash
 cd ../hq
 redis-server --port 6379 &
-bun run typescript/server.ts &      # TLS server on https://localhost:3000
+bun run typescript/server.ts &      # HTTP server on http://localhost:3000
 export HQ_RESULT_DIR=/tmp/hq-results
 ```
 
@@ -55,7 +55,7 @@ python -u coffea_hq_runner_smoke.py     # minimal Runner smoke test
 jupyter lab ttbar_analysis_pipeline.ipynb
 ```
 
-The notebooks and scripts point at the server's TLS certificate via `~/irishep/hq/cert.pem` (`HQ_VERIFY` in the notebook config cell). Adjust it if the hq repo lives elsewhere.
+Notebooks and scripts talk to `http://localhost:3000` (no TLS cert). Do not set `HQ_SERVER_CERT_FILE` / `HQ_SERVER_KEY_FILE` when starting bun.
 
 ## Knobs that matter
 
