@@ -12,22 +12,38 @@ from coffea.analysis_tools import PackedSelection
 
 import utils
 
+
+def make_hist_templates() -> dict:
+    """Region histograms for signal and control region.
+
+    Shared by local accumulation (deepcopied per chunk) and the histserv
+    transport (registered once on the server via hq.histserv.init_remote_hists).
+    """
+    return {
+        region: (
+            hist.Hist.new.Reg(utils.config["global"]["NUM_BINS"],
+                              utils.config["global"]["BIN_LOW"],
+                              utils.config["global"]["BIN_HIGH"],
+                              name="observable",
+                              label="observable [GeV]")
+            .StrCat([], name="process", label="Process", growth=True)
+            .StrCat([], name="variation", label="Systematic variation", growth=True)
+            .Weight()
+        )
+        for region in ["4j1b", "4j2b"]
+    }
+
+
 class TtbarAnalysis(processor.ProcessorABC):
-    def __init__(self, use_inference, use_triton):
+    def __init__(self, use_inference, use_triton, remote_hists=None):
 
         # initialize dictionary of hists for signal and control region
-        self.hist_dict = {}
-        for region in ["4j1b", "4j2b"]:
-            self.hist_dict[region] = (
-                hist.Hist.new.Reg(utils.config["global"]["NUM_BINS"], 
-                                  utils.config["global"]["BIN_LOW"], 
-                                  utils.config["global"]["BIN_HIGH"], 
-                                  name="observable", 
-                                  label="observable [GeV]")
-                .StrCat([], name="process", label="Process", growth=True)
-                .StrCat([], name="variation", label="Systematic variation", growth=True)
-                .Weight()
-            )
+        self.hist_dict = make_hist_templates()
+
+        # optional histserv transport: dict of histserv RemoteHist handles
+        # (from hq.histserv.init_remote_hists); fills go to the server and
+        # process() returns only tiny metadata instead of histograms
+        self.remote_hists = remote_hists
         
         self.cset = correctionlib.CorrectionSet.from_file("corrections.json")
         self.use_inference = use_inference
@@ -69,8 +85,13 @@ class TtbarAnalysis(processor.ProcessorABC):
             # IO testing with no subsequent processing
             return self.only_do_IO(events)
 
-        # create copies of histogram objects
-        hist_dict = copy.deepcopy(self.hist_dict)
+        # create copies of histogram objects (local mode), or buffered proxies
+        # with the same .fill() signature that flush to histserv at the end
+        if self.remote_hists is None:
+            hist_dict = copy.deepcopy(self.hist_dict)
+        else:
+            from hq.histserv import make_buffered
+            hist_dict = make_buffered(self.remote_hists)
         if self.use_inference:
             ml_hist_dict = copy.deepcopy(self.ml_hist_dict)
 
@@ -249,6 +270,24 @@ class TtbarAnalysis(processor.ProcessorABC):
                                 variation=syst_var_name, weight=region_weights
                             )
 
+
+        if self.remote_hists is not None:
+            from hq.histserv import flush_buffered
+
+            # one idempotent fill_many per hist; the chunk identity dedupes
+            # retried/duplicated tasks server-side
+            chunk_id = (
+                str(events.metadata["fileuuid"]),
+                int(events.metadata["entrystart"]),
+                int(events.metadata["entrystop"]),
+            )
+            flush_buffered(hist_dict, unique_id=chunk_id)
+            # region histograms already live on the server; return only tiny
+            # metadata (ML hists, if any, still travel the classic path)
+            output = {"nevents": {events.metadata["dataset"]: len(events)}}
+            if self.use_inference:
+                output["ml_hist_dict"] = ml_hist_dict
+            return output
 
         output = {"nevents": {events.metadata["dataset"]: len(events)}, "hist_dict": hist_dict}
         if self.use_inference:
